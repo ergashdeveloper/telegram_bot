@@ -13,7 +13,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = os.environ.get("CHANNEL_ID")
 TIMEZONE = "Asia/Tashkent"
 SEND_HOUR = 21
-SEND_MINUTE = 30
+SEND_MINUTE = 0
 DATA_FILE = "bot_data.json"
 IMAGES_FOLDER = "images"
 
@@ -169,10 +169,10 @@ def main():
         .build()
     )
 
-    app.add_handler(CommandHandler("Boshlash", start_command))
-    app.add_handler(CommandHandler("Holati", status_command))
-    app.add_handler(CommandHandler("Tekshirish", scan_command))
-    app.add_handler(CommandHandler("Hozir yuborish", send_now_command))
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("status", status_command))
+    app.add_handler(CommandHandler("scan", scan_command))
+    app.add_handler(CommandHandler("send_now", send_now_command))
 
     app.run_polling(drop_pending_updates=True)
 
