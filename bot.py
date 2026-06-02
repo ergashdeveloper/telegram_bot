@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import asyncio
+import random
 from datetime import datetime, timedelta
 from telegram import Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
@@ -12,7 +13,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = os.environ.get("CHANNEL_ID")
 TIMEZONE = "Asia/Tashkent"
 SEND_HOUR = 21
-SEND_MINUTE = 0
+SEND_MINUTE = 30
 DATA_FILE = "bot_data.json"
 IMAGES_FOLDER = "images"
 
@@ -54,10 +55,14 @@ def get_next_image():
     sent_images = data.get("sent_images", [])
     remaining = [img for img in all_images if img not in sent_images]
     if not remaining:
+        logger.info("Barcha rasmlar yuborildi! Boshidan boshlanmoqda...")
         data["sent_images"] = []
         save_data(data)
         remaining = all_images
-    return remaining[0] if remaining else None
+    if not remaining:
+        return None
+    # Tasodifiy rasm tanlash
+    return random.choice(remaining)
 
 def mark_as_sent(image_name):
     data = load_data()
@@ -124,7 +129,7 @@ async def status_command(update, context: ContextTypes.DEFAULT_TYPE):
         f"📁 Jami: {total} ta\n"
         f"✅ Yuborilgan: {sent} ta\n"
         f"⏳ Qolgan: {total - sent} ta\n"
-        f"🔜 Keyingi: {next_img or 'Yoq'}\n"
+        f"🔜 Keyingi: tasodifiy\n"
         f"🕐 Vaqt: {now.strftime('%H:%M')}"
     )
 
@@ -143,7 +148,6 @@ async def send_now_command(update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def post_init(application: Application):
-    """Bot ishga tushgandan keyin scheduler ni boshlash"""
     asyncio.create_task(scheduler_loop(application.bot))
     logger.info("🤖 Bot va scheduler ishga tushdi!")
 
@@ -165,10 +169,10 @@ def main():
         .build()
     )
 
-    app.add_handler(CommandHandler("start", start_command))
-    app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("scan", scan_command))
-    app.add_handler(CommandHandler("send_now", send_now_command))
+    app.add_handler(CommandHandler("Boshlash", start_command))
+    app.add_handler(CommandHandler("Holati", status_command))
+    app.add_handler(CommandHandler("Tekshirish", scan_command))
+    app.add_handler(CommandHandler("Hozir yuborish", send_now_command))
 
     app.run_polling(drop_pending_updates=True)
 
