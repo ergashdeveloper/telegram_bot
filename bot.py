@@ -8,8 +8,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
 
 # === SOZLAMALAR ===
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"       # @BotFather dan olingan token
-CHANNEL_ID = "@your_channel_name"       # Kanal username yoki -100xxxxxxxxxx
+BOT_TOKEN = "8928336722:AAEe_gQkymtEsoNiKqToogGxvRcrhgv17DU"       # @BotFather dan olingan token
+CHANNEL_ID = "https://t.me/+XxwYek_K4GsxMjQ6"       # Kanal username yoki -100xxxxxxxxxx
 TIMEZONE = "Asia/Tashkent"              # O'zbekiston vaqti
 SEND_HOUR = 21                          # Yuborish soati (21:00)
 SEND_MINUTE = 0
