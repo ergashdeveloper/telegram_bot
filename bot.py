@@ -23,8 +23,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# === MA'LUMOTLAR BILAN ISHLASH ===
-
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
@@ -56,13 +54,10 @@ def get_next_image():
     sent_images = data.get("sent_images", [])
     remaining = [img for img in all_images if img not in sent_images]
     if not remaining:
-        logger.info("Barcha rasmlar yuborildi! Boshidan boshlanmoqda...")
         data["sent_images"] = []
         save_data(data)
         remaining = all_images
-    if not remaining:
-        return None
-    return remaining[0]
+    return remaining[0] if remaining else None
 
 def mark_as_sent(image_name):
     data = load_data()
@@ -71,16 +66,14 @@ def mark_as_sent(image_name):
     save_data(data)
 
 
-# === ASOSIY FUNKSIYA ===
-
 async def send_daily_image(bot: Bot):
     image_name = get_next_image()
     if not image_name:
-        logger.error("Yuborish uchun rasm topilmadi!")
+        logger.error("Rasm topilmadi!")
         return
     image_path = os.path.join(IMAGES_FOLDER, image_name)
     if not os.path.exists(image_path):
-        logger.error(f"Rasm fayli topilmadi: {image_path}")
+        logger.error(f"Fayl topilmadi: {image_path}")
         return
     try:
         with open(image_path, "rb") as photo:
@@ -91,22 +84,18 @@ async def send_daily_image(bot: Bot):
         logger.error(f"Xato: {e}")
 
 
-# === SCHEDULER ===
-
 async def scheduler_loop(bot: Bot):
     tz = pytz.timezone(TIMEZONE)
     while True:
         now = datetime.now(tz)
         target = now.replace(hour=SEND_HOUR, minute=SEND_MINUTE, second=0, microsecond=0)
         if now >= target:
-            target = target + timedelta(days=1)
+            target += timedelta(days=1)
         wait_seconds = (target - now).total_seconds()
-        logger.info(f"Keyingi yuborish: {target.strftime('%Y-%m-%d %H:%M')} ({int(wait_seconds//3600)} soat {int((wait_seconds%3600)//60)} daqiqadan keyin)")
+        logger.info(f"Keyingi yuborish: {target.strftime('%Y-%m-%d %H:%M')} ({int(wait_seconds//3600)}h {int((wait_seconds%3600)//60)}m)")
         await asyncio.sleep(wait_seconds)
         await send_daily_image(bot)
 
-
-# === KOMANDALAR ===
 
 async def start_command(update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
@@ -118,9 +107,8 @@ async def start_command(update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Yuborilgan: {sent}\n"
         f"⏳ Qolgan: {total - sent}\n\n"
         f"⏰ Har kuni {SEND_HOUR:02d}:{SEND_MINUTE:02d} da yuboradi\n\n"
-        f"Komandalar:\n"
         f"/status - Holat\n"
-        f"/scan - Rasmlarni qayta skanerlash\n"
+        f"/scan - Rasmlarni skanerlash\n"
         f"/send_now - Hozir yuborish (test)"
     )
 
@@ -133,53 +121,57 @@ async def status_command(update, context: ContextTypes.DEFAULT_TYPE):
     now = datetime.now(tz)
     await update.message.reply_text(
         f"📊 Bot holati:\n\n"
-        f"📁 Jami: {total} ta rasm\n"
+        f"📁 Jami: {total} ta\n"
         f"✅ Yuborilgan: {sent} ta\n"
         f"⏳ Qolgan: {total - sent} ta\n"
         f"🔜 Keyingi: {next_img or 'Yoq'}\n"
-        f"🕐 Hozirgi vaqt: {now.strftime('%H:%M')}"
+        f"🕐 Vaqt: {now.strftime('%H:%M')}"
     )
 
 async def scan_command(update, context: ContextTypes.DEFAULT_TYPE):
     images = scan_images_folder()
     if images:
-        text = f"🔍 {len(images)} ta rasm topildi:\n\n" + "\n".join([f"  • {img}" for img in images])
+        text = f"🔍 {len(images)} ta rasm:\n\n" + "\n".join([f"• {img}" for img in images])
     else:
         text = "❌ Rasm topilmadi. 'images/' papkasiga rasm qo'shing."
     await update.message.reply_text(text)
 
 async def send_now_command(update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("📤 Rasm yuborilmoqda...")
+    await update.message.reply_text("📤 Yuborilmoqda...")
     await send_daily_image(context.bot)
     await update.message.reply_text("✅ Bajarildi!")
 
 
-# === ISHGA TUSHIRISH ===
+async def post_init(application: Application):
+    """Bot ishga tushgandan keyin scheduler ni boshlash"""
+    asyncio.create_task(scheduler_loop(application.bot))
+    logger.info("🤖 Bot va scheduler ishga tushdi!")
 
-async def main():
+
+def main():
     if not BOT_TOKEN:
-        logger.error("BOT_TOKEN topilmadi! Railway Variables ga qo'shing.")
+        logger.error("BOT_TOKEN topilmadi!")
         return
     if not CHANNEL_ID:
-        logger.error("CHANNEL_ID topilmadi! Railway Variables ga qo'shing.")
+        logger.error("CHANNEL_ID topilmadi!")
         return
 
     scan_images_folder()
 
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
+
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("status", status_command))
     app.add_handler(CommandHandler("scan", scan_command))
     app.add_handler(CommandHandler("send_now", send_now_command))
 
-    logger.info("🤖 Bot ishga tushdi!")
-    
-    # Schedulerni background task sifatida ishga tushirish
-    loop = asyncio.get_event_loop()
-    loop.create_task(scheduler_loop(app.bot))
-    
-    await app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
