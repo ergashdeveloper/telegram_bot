@@ -2,7 +2,7 @@ import os
 import json
 import logging
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram import Bot
 from telegram.ext import Application, CommandHandler, ContextTypes
 import pytz
@@ -91,23 +91,17 @@ async def send_daily_image(bot: Bot):
         logger.error(f"Xato: {e}")
 
 
-# === SCHEDULER (APSchedulersiz) ===
+# === SCHEDULER ===
 
 async def scheduler_loop(bot: Bot):
-    """Har kuni belgilangan vaqtda rasm yuboradi"""
     tz = pytz.timezone(TIMEZONE)
     while True:
         now = datetime.now(tz)
-        # Keyingi yuborish vaqtini hisoblash
         target = now.replace(hour=SEND_HOUR, minute=SEND_MINUTE, second=0, microsecond=0)
         if now >= target:
-            # Bugun vaqt o'tib ketgan, ertaga
-            from datetime import timedelta
             target = target + timedelta(days=1)
-        
         wait_seconds = (target - now).total_seconds()
         logger.info(f"Keyingi yuborish: {target.strftime('%Y-%m-%d %H:%M')} ({int(wait_seconds//3600)} soat {int((wait_seconds%3600)//60)} daqiqadan keyin)")
-        
         await asyncio.sleep(wait_seconds)
         await send_daily_image(bot)
 
@@ -127,7 +121,7 @@ async def start_command(update, context: ContextTypes.DEFAULT_TYPE):
         f"Komandalar:\n"
         f"/status - Holat\n"
         f"/scan - Rasmlarni qayta skanerlash\n"
-        f"/send\\_now - Hozir yuborish (test)"
+        f"/send_now - Hozir yuborish (test)"
     )
 
 async def status_command(update, context: ContextTypes.DEFAULT_TYPE):
@@ -178,12 +172,13 @@ async def main():
     app.add_handler(CommandHandler("scan", scan_command))
     app.add_handler(CommandHandler("send_now", send_now_command))
 
-    # Scheduler va botni parallel ishga tushirish
-    async with app:
-        await app.start()
-        await app.updater.start_polling(drop_pending_updates=True)
-        logger.info("🤖 Bot ishga tushdi!")
-        await scheduler_loop(app.bot)
+    logger.info("🤖 Bot ishga tushdi!")
+    
+    # Schedulerni background task sifatida ishga tushirish
+    loop = asyncio.get_event_loop()
+    loop.create_task(scheduler_loop(app.bot))
+    
+    await app.run_polling(drop_pending_updates=True)
 
 
 if __name__ == "__main__":
