@@ -127,7 +127,7 @@ async def status_command(update, context: ContextTypes.DEFAULT_TYPE):
         f"📁 Jami: {total} ta rasm\n"
         f"✅ Yuborilgan: {sent} ta\n"
         f"⏳ Qolgan: {total - sent} ta\n"
-        f"🔜 Keyingi: {next_img or 'Yo\\'q'}"
+        f"🔜 Keyingi: {next_img or 'Yoq'}"
     )
 
 async def scan_command(update, context: ContextTypes.DEFAULT_TYPE):
