@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 import pytz
 
 # === SOZLAMALAR ===
-BOT_TOKEN = os.environ.get("8951465330:AAH5RLqC_R44Mac0fkmUiGeBvRx1WMgjJ9A")
+BOT_TOKEN = os.environ.get("8707961129:AAEMvNOwF6XkBCNEaG-SuEfjT7Ttj6sBRDo")
 CHANNEL_ID = os.environ.get("1002889671666")
 TIMEZONE = "Asia/Tashkent"
 SEND_HOUR = 21
